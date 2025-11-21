@@ -5,7 +5,11 @@
 // MUST be the first module
 mod fmt;
 
-use core::{borrow::BorrowMut, cell::RefCell, fmt::Display};
+use core::{
+    borrow::BorrowMut,
+    cell::RefCell,
+    fmt::{Display, Error},
+};
 
 #[cfg(feature = "dhcpv4")]
 use smoltcp::socket::dhcpv4::Socket as Dhcpv4Socket;
@@ -706,6 +710,52 @@ pub enum IoError {
     BindError(smoltcp::socket::udp::BindError),
     #[cfg(feature = "tcp")]
     ListenError(smoltcp::socket::tcp::ListenError),
+}
+
+impl core::fmt::Display for IoError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            IoError::SocketClosed => write!(f, "Socket has been closed"),
+
+            #[cfg(feature = "multicast")]
+            IoError::MultiCastError(err) => write!(f, "Multicast error: {}", err),
+
+            #[cfg(feature = "tcp")]
+            IoError::TcpRecvError => write!(f, "TCP receive error"),
+
+            #[cfg(feature = "udp")]
+            IoError::UdpRecvError(err) => write!(f, "UDP receive error: {}", err),
+
+            #[cfg(feature = "tcp")]
+            IoError::TcpSendError(err) => write!(f, "TCP send error: {}", err),
+
+            #[cfg(feature = "udp")]
+            IoError::UdpSendError(err) => write!(f, "UDP send error: {}", err),
+
+            #[cfg(feature = "tcp")]
+            IoError::ConnectError(err) => write!(f, "TCP connect error: {}", err),
+
+            #[cfg(feature = "udp")]
+            IoError::BindError(err) => write!(f, "UDP bind error: {}", err),
+
+            #[cfg(feature = "tcp")]
+            IoError::ListenError(err) => write!(f, "TCP listen error: {}", err),
+        }
+    }
+}
+
+impl core::error::Error for IoError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+        None
+    }
+
+    fn description(&self) -> &str {
+        "description() is deprecated; use Display"
+    }
+
+    fn cause(&self) -> Option<&dyn core::error::Error> {
+        self.source()
+    }
 }
 
 impl embedded_io::Error for IoError {
